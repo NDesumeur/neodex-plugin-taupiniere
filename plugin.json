@@ -1,0 +1,22 @@
+{
+  "id": "neodex.taupiniere",
+  "name": "Taupinière",
+  "version": "1.0.0",
+  "author": "NDesumeur",
+  "description": "Jeu de réflexe : pendant une minute, des taupes sortent de neuf trous dans un potager. Tape-les avant qu'elles ne rentrent, à la souris, au doigt ou au pavé numérique. Taupes dorées qui rapportent gros, taupes casquées qui demandent deux coups, hérissons à ne pas toucher, et un multiplicateur pour les séries. Score et record.",
+  "icon": "icon.png",
+  "entry": "index.js",
+  "view": "taupiniere",
+  "neobase": ">=4.0.0",
+  "type": "app",
+  "category": "Jeux",
+  "syncMode": "progression",
+  "syncInfo": "Record.",
+  "mobile": false,
+  "system": false,
+  "dependencies": {},
+  "sdk": "2.1.0",
+  "permissions": [
+    "storage"
+  ]
+}
