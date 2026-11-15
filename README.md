@@ -32,3 +32,12 @@ Ton record et tes totaux sont enregistrés par NeoDex, sauvegardés et synchroni
 Dans NeoDex : **NeoStore → À découvrir → Taupinière → Installer**.
 
 Développer un plugin : voir le [SDK NeoDex](https://github.com/NDesumeur/neodex-sdk).
+
+## Plein écran
+
+Le bouton « PLEIN ÉCRAN » met le jeu en plein écran. Le jeu grandit aussi avec la fenêtre, du petit portable au grand écran.
+
+## Le jardinier et le mode survie
+
+- **Le jardinier** se tient derrière la clôture, en bas du jardin. Quand tu tapes dans le vide, qu'une taupe s'échappe ou que tu touches le hérisson, il rougit, lève le poing et râle (« Ma salade ! », « Vise mieux ! »…).
+- **Mode survie** (menu Mode) : pas de limite de temps, mais trois vies. Chaque taupe qui s'échappe en coûte une. Les taupes sortent de plus en plus vite ; le record de survie est gardé à part.

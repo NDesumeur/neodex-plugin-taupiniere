@@ -2,16 +2,19 @@
 // Jeu NeoDex en pixel art dessiné à la main (police bitmap, cadres et boutons en pixels). Il tourne dans le bac à sable de NeoDex.
 const HTML = `<div class="appWrap wide">
   <div class="agHead"><span class="label">Taupinière</span><span class="hint">Clique les taupes, ou pavé numérique · P : pause</span></div>
-  <div class="gMain"><div class="gameBox"><canvas id="tpCanvas" width="144" height="158" role="img" aria-label="Taupinière"></canvas></div>
+  <div class="gMain"><div class="gameBox"><canvas id="tpCanvas" width="144" height="184" role="img" aria-label="Taupinière"></canvas></div>
     <div class="gSide">
       <div class="sysCard"><b>RECORDS</b><div class="gStats" id="tpStats"></div></div>
-      <div class="row"><button class="btn main" id="tpNew">NOUVELLE PARTIE</button></div>
+      <label class="row">Mode <select class="f gSel" id="tpMode"><option value="chrono">Chrono 60 s</option><option value="survie">Survie : 3 vies</option></select></label>
+      <div class="row"><button class="btn main" id="tpNew">NOUVELLE PARTIE</button><button class="btn" id="tpFs">PLEIN ÉCRAN</button></div>
       <div class="hint">Une partie dure 60 secondes. Tape chaque taupe avant qu'elle ne rentre : 10 points, 20 pour une taupe casquée (deux coups : le premier fait tomber le casque), 50 pour une taupe dorée, rapide. Ne touche pas le hérisson : 30 points de moins. Cinq coups réussis d'affilée doublent les points, puis ×3, ×4, ×5 ; un coup dans le vide ou une taupe qui s'échappe remet la série à zéro. Au clavier : le pavé numérique (7 8 9 en haut), ou A Z E / Q S D / W X C.</div>
     </div></div>
 </div>`;
 const CSS = `.gMain{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
 .gameBox{display:grid;place-items:center;padding:10px;background:#05010b;flex:0 0 auto;position:relative}
-.gameBox canvas{height:min(72vh,700px);width:auto;aspect-ratio:144/158;image-rendering:pixelated;cursor:var(--cp,pointer);touch-action:none}
+.gameBox:fullscreen{padding:0}
+.gameBox:fullscreen canvas{height:100vh;max-width:100vw}
+.gameBox canvas{height:min(calc(100vh - 190px),900px);min-height:300px;max-width:100%;width:auto;aspect-ratio:144/184;image-rendering:pixelated;cursor:var(--cp,pointer);touch-action:none}
 .gSide{display:flex;flex-direction:column;gap:14px;flex:1;min-width:250px;max-width:420px}
 .gSide .sysCard{display:flex;flex-direction:column}
 .gStats{display:grid;grid-template-columns:1fr auto;gap:4px 14px}
@@ -288,7 +291,7 @@ export default async function (ctx) {
   view.innerHTML = HTML;
   pxSkin(view.querySelector('.appWrap'), { title: "TAUPINIÈRE", T: {"k": "#0e0a08", "k2": "#1a1410", "fill": "#24301c", "fillOn": "#304026", "hl": "#3a4a2e", "line": "#5a6a48", "acc": "#ffd84a", "accL": "#fff6b0", "accS": "#c89a1a", "accD": "#4a3a08", "rivet": "#f0f0e0", "btn": "#3a4a2e", "btnHi": "#5a6a48", "btnLo": "#1a1410", "btnHov": "#44562f", "btnHovHi": "#7a8a62", "text": "#f4f4ec", "muted": "#c4c8b4", "acc2": "#ff8aa8", "gold": "#ffd84a", "orange": "#ff8a3a", "red": "#ff4a3a", "green": "#7ee07a", "green2": "#2f8a3a", "bg": "#121a0e", "bgDot": "#24301c", "bgDot2": "#1a2414", "spark": "#3a4a10", "spark2": "#ffd84a", "tile": ["................", "...:............", "................", "..........+.....", "................", "................", ".....:..........", "................", "................", ".............:..", "................", "..+.............", "................", ".........:......", "................", "................"]},
   emblem: ["....kkkk....", "..kkmmmmkk..", ".kmmmmmmmmk.", "kmmwkmmwkmmk", "kmmkkmmkkmmk", "kmmmrrrrmmmk", "kmmrwwwwrmmk", "kmmmrrrrmmmk", "kooooooooook", "oooooooooooo", "kkkkkkkkkkkk"],
-  icons: [[/^NOUVELLE/, 'play'], [/^RECORDS/, 'crown']] });
+  icons: [[/^NOUVELLE/, 'play'], [/^RECORDS/, 'crown'], [/^PLEIN/, 'full']] });
   const $ = id => view.querySelector('#' + id) || document.getElementById(id);
   const doc = async n => { try { return await folder.read(n); } catch { return null; } };
   const games = { best: {}, ...(await doc('games')) };
@@ -320,9 +323,9 @@ const pxFont = (g, text, x, y, color, size = 8, align = 'left') => { const s = P
 
 /* ---------- Taupinière : des taupes sortent de 9 trous pendant 60 secondes ; on les tape avant qu'elles ne rentrent.
    Taupe dorée = gros points, taupe casquée = deux coups, hérisson = ne pas toucher. Les coups réussis d'affilée multiplient les points ---------- */
-const TP = {W: 144, H: 158, HUD: 14, ROUND: 60 * 60};
+const TP = {W: 144, H: 184, HUD: 14, ROUND: 60 * 60, YARD: 162};  // YARD : sous la dernière rangée de trous, la clôture et l'allée du jardinier
 const TP_HOLES = [0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => ({x: 26 + (i % 3) * 46, y: 52 + Math.floor(i / 3) * 44}));
-const tps = gstore('taupiniere', {games: 0, moles: 0, golds: 0});
+const tps = gstore('taupiniere', {games: 0, moles: 0, golds: 0}); tps.mode ??= 'chrono';
 let tp = null, tpac = null;
 // la taupe (16 x 14), sa tête étourdie, la dorée, la casquée (casque de chantier), le hérisson
 const TP_PAL = {k: '#1a1018', f: '#6a4a3a', F: '#8a6a52', d: '#4a3028', n: '#ff8aa8', e: '#14101c', w: '#ffffff', c: '#f0d8c0', y: '#ffd84a', Y: '#c89a1a', h: '#ffc83a', H: '#c88a1a', s: '#8a7a6a', S: '#5a4a3a'};
@@ -346,10 +349,21 @@ const TP_GARDEN = (() => { const c = el('canvas'); c.width = TP.W; c.height = TP
   for (let i = 0; i < 40; i++) { const x = Math.floor(r() * TP.W), y = TP.HUD + Math.floor(r() * (TP.H - TP.HUD)); if (TP_HOLES.some(h => Math.abs(h.x - x) < 16 && Math.abs(h.y - y) < 12)) continue;
     const col = ['#ffffff', '#ffd84a', '#ff8aa8'][i % 3]; px(g, col, x, y - 1); px(g, col, x - 1, y); px(g, col, x + 1, y); px(g, col, x, y + 1); px(g, '#c89a1a', x, y); }
   for (let y = TP.HUD + 2; y < TP.H; y += 22) for (let x = (y % 44 ? 4 : 18); x < TP.W; x += 28) { px(g, '#2f6a2a', x, y, 1, 3); px(g, '#2f6a2a', x + 2, y + 1, 1, 2); }
+  // en bas : la clôture de bois et l'allée de terre où se tient le jardinier
+  px(g, '#8a6a42', 0, TP.YARD + 6, TP.W, TP.H - TP.YARD - 6); for (let i = 0; i < 60; i++) px(g, r() < .5 ? '#9a7a52' : '#6a4a2a', Math.floor(r() * TP.W), TP.YARD + 7 + Math.floor(r() * (TP.H - TP.YARD - 7)));
+  px(g, '#c89a5a', 0, TP.YARD + 1, TP.W, 2); px(g, '#6a4020', 0, TP.YARD + 3, TP.W, 1);
+  for (let x = 2; x < TP.W; x += 12) { px(g, '#1a1018', x - 1, TP.YARD - 4, 5, 11); px(g, '#d8a868', x, TP.YARD - 3, 3, 9); px(g, '#a87a42', x + 2, TP.YARD - 3, 1, 9); px(g, '#d8a868', x + 1, TP.YARD - 4, 1, 1); }
   for (const h of TP_HOLES) { for (let dy = -6; dy <= 6; dy++) { const w = Math.round(Math.sqrt(1 - (dy / 6.5) ** 2) * 16); px(g, dy < 0 ? '#8a5a3a' : '#6a4028', h.x - w, h.y + dy, w * 2, 1); }
     for (let dy = -3; dy <= 3; dy++) { const w = Math.round(Math.sqrt(1 - (dy / 3.5) ** 2) * 10); px(g, '#1a0e0a', h.x - w, h.y + dy - 1, w * 2, 1); }
     px(g, '#a8784a', h.x - 12, h.y - 5, 6, 1); px(g, '#a8784a', h.x + 5, h.y - 4, 4, 1); }
   return c; })();
+// le jardinier (chapeau de paille, moustache, salopette) ; quand il râle, il rougit, lève le poing et tremble
+const TP_GARDENER_ROWS = ['.....kkkkkk.....', '....kyyyyyyk....', '....kYYYYYYk....', '.kkkyyyyyyyykkk.', 'kyyyyyyyyyyyyyyk', '.kkkkkkkkkkkkkk.', '...kcccccccck...', '...kckcccckck...', '...krccccccrk...', '...kcmmmmmmck...', '...kccckkccck...', '....kkcccckk....', '..kwwkbbbbkwwk..', '.kwwwbbbbbbwwwk.', 'khwwbbBBBBbbwwhk', 'khhkbbbbbbbbkhhk', '.kk.bbbbbbbb.kk.', '....bbbkkbbb....', '....bbbk.kbbb...', '...kkkk..kkkk...'];
+const TP_GPAL = {k: '#1a1018', y: '#f0d070', Y: '#c89a3a', c: '#f0c8a0', r: '#f08a8a', m: '#d8d0c8', w: '#f4f0f8', b: '#3a6ac8', B: '#2a4a9a', h: '#f0c8a0'};
+const TP_GARDENER = {calm: tpArt(TP_GARDENER_ROWS, TP_GPAL), mad: tpArt(TP_GARDENER_ROWS, {...TP_GPAL, c: '#f4a088', r: '#e04a4a'})};
+const TP_GRUMBLE = {miss: ['Raté !', 'Dans le vide !', 'Vise mieux !'], escape: ['Elle file !', 'Mes carottes !', 'Ma salade !', 'Rattrape-la !'], hedge: ['Pas le hérisson !']};
+const tpGrumble = kind => { const l = TP_GRUMBLE[kind]; tp.talk = {text: l[Math.floor(tp.rnd() * l.length)], t: 80}; };
+const TP_HEART = ['.kk.kk.', 'krrkrrk', 'krrrrrk', '.krrrk.', '..krk..', '...k...'];
 // le bord avant de chaque trou, redessiné par-dessus la taupe pour qu'elle sorte de la terre
 const tpLip = (g, h) => { for (let dy = 0; dy <= 6; dy++) { const w = Math.round(Math.sqrt(1 - (dy / 6.5) ** 2) * 16); px(g, dy < 2 ? '#8a5a3a' : '#6a4028', h.x - w, h.y + dy + 1, w * 2, 1); } };
 function tpBeep(f, d, type = 'square', slide = 0, vol = .04) { try { tpac ??= new AudioContext(); const o = tpac.createOscillator(), g = tpac.createGain(), t = tpac.currentTime; o.type = type; o.frequency.setValueAtTime(f, t); if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + d); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + d); o.connect(g).connect(tpac.destination); o.start(t); o.stop(t + d); } catch {} }
@@ -357,7 +371,7 @@ function tpBeep(f, d, type = 'square', slide = 0, vol = .04) { try { tpac ??= ne
 const renew = (old, o) => { if (!old) return o; for (const k of Object.keys(old)) if (k !== 'raf') delete old[k]; return Object.assign(old, o); };
 function tpNew() {
   const g = tp?.g;
-  tp = renew(tp, {g, mode: 'ready', tick: 0, seen: 0, t: 0, score: 0, streak: 0, bestStreak: 0, hits: 0, golds: 0, misses: 0, ouch: 0, holes: TP_HOLES.map(() => null), next: 40, pops: [], swing: null, dead: 0, record: false, rnd: seeded(Date.now() % 1e9)});
+  tp = renew(tp, {g, mode: 'ready', tick: 0, seen: 0, t: 0, score: 0, streak: 0, bestStreak: 0, hits: 0, golds: 0, misses: 0, ouch: 0, holes: TP_HOLES.map(() => null), next: 40, pops: [], swing: null, dead: 0, record: false, rnd: seeded(Date.now() % 1e9), surv: tps.mode === 'survie', lives: 3, talk: null, escaped: 0});
   tpInfo();
 }
 const tpMult = () => 1 + Math.min(4, Math.floor(tp.streak / 5));  // ×2 après 5 coups d'affilée, jusqu'à ×5
@@ -372,8 +386,8 @@ function tpWhack(i) {
   if (tp.mode !== 'play') return;
   const h = TP_HOLES[i], m = tp.holes[i];
   tp.swing = {x: h.x, y: h.y - 10, t: 8};
-  if (!m || m.hit || m.y < .45) { tp.streak = 0; tp.misses++; tpBeep(120, .06, 'triangle', 0, .03); return; }  // dans le vide : la série s'arrête
-  if (m.kind === 'hedge') { m.hit = 1; m.phase = 'down'; tp.streak = 0; tp.ouch++; tp.score = Math.max(0, tp.score - 30); tp.pops.push({x: h.x, y: h.y - 18, text: 'AÏE ! -30', c: '#ff4a3a', t: 40}); tpBeep(90, .3, 'sawtooth', 50, .06); return; }
+  if (!m || m.hit || m.y < .45) { tp.streak = 0; tp.misses++; tpGrumble('miss'); tpBeep(120, .06, 'triangle', 0, .03); return; }  // dans le vide : la série s'arrête
+  if (m.kind === 'hedge') { m.hit = 1; m.phase = 'down'; tp.streak = 0; tp.ouch++; tp.score = Math.max(0, tp.score - 30); tp.pops.push({x: h.x, y: h.y - 18, text: 'AÏE ! -30', c: '#ff4a3a', t: 40}); tpGrumble('hedge'); tpBeep(90, .3, 'sawtooth', 50, .06); return; }
   if (--m.hp > 0) { m.dent = 8; tpBeep(700, .05, 'square', 400, .04); tp.pops.push({x: h.x, y: h.y - 18, text: 'TOC', c: '#ffffff', t: 20}); return; }  // le casque tombe
   m.hit = 1; m.phase = 'down'; m.stay = 0;
   tp.streak++; tp.bestStreak = Math.max(tp.bestStreak, tp.streak); tp.hits++;
@@ -384,13 +398,20 @@ function tpWhack(i) {
 }
 function tpEnd() {
   tp.mode = 'over'; tp.dead = 0;
-  tps.games++; tps.moles += tp.hits; tps.golds += tp.golds; tp.record = best('taupiniere', tp.score); saveGames(); tpInfo();
+  tps.games++; tps.moles += tp.hits; tps.golds += tp.golds; tp.record = best(tp.surv ? 'taupiniereS' : 'taupiniere', tp.score); saveGames(); tpInfo();
   tpBeep(660, .15); setTimeout(() => tpBeep(440, .15), 150); setTimeout(() => tpBeep(880, .3), 300);
+}
+function tpEscape(i) {  // une taupe s'échappe : la série s'arrête, le jardinier râle ; en survie, une vie de moins
+  tp.streak = 0; tp.escaped++; tpGrumble('escape');
+  if (!tp.surv || tp.mode !== 'play') return;
+  tp.lives--; tp.pops.push({x: TP_HOLES[i].x, y: TP_HOLES[i].y - 18, text: '-1 VIE', c: '#ff4a3a', t: 40}); tpBeep(200, .2, 'sawtooth', 100, .05);
+  if (tp.lives <= 0) tpEnd();
 }
 function tpUpdate() {
   if (tp.mode === 'over') { tp.dead++; return; }
   if (tp.mode !== 'play') return;
-  if (++tp.t >= TP.ROUND) return tpEnd();
+  if (++tp.t >= TP.ROUND && !tp.surv) return tpEnd();  // en survie, pas de limite de temps
+  if (tp.talk && --tp.talk.t <= 0) tp.talk = null;
   const d = tp.t / TP.ROUND;
   if (--tp.next <= 0) { tpSpawn(); if (d > .5 && tp.rnd() < .35) tpSpawn(); tp.next = Math.round(50 - 26 * d + tp.rnd() * 20); }
   tp.holes.forEach((m, i) => {
@@ -398,7 +419,7 @@ function tpUpdate() {
     if (m.dent) m.dent--;
     if (m.phase === 'up') { m.y = Math.min(1, m.y + .12); if (m.y === 1) m.phase = 'stay'; }
     else if (m.phase === 'stay') { if (--m.stay <= 0) m.phase = 'down'; }
-    else { m.y -= m.hit ? .06 : .1; if (m.y <= 0) { if (!m.hit && m.kind !== 'hedge') tp.streak = 0; tp.holes[i] = null; } }  // une taupe qui s'échappe casse la série
+    else { m.y -= m.hit ? .06 : .1; if (m.y <= 0) { tp.holes[i] = null; if (!m.hit && m.kind !== 'hedge') tpEscape(i); } }  // une taupe qui s'échappe casse la série
   });
   for (const p of tp.pops) { p.t--; p.y -= .3; } tp.pops = tp.pops.filter(p => p.t > 0);
   if (tp.swing && --tp.swing.t <= 0) tp.swing = null;
@@ -423,22 +444,29 @@ function tpDraw() {
     // le numéro du trou, discret, pour jouer au clavier (pavé numérique)
     if (tp.mode !== 'play' || !m) pxFont(g, String([7, 8, 9, 4, 5, 6, 1, 2, 3][i]), h.x, h.y + 14, '#2f6a2a', 8, 'center');
   });
+  { const G = tp.talk, sh = G && (tp.tick >> 1) % 2 ? 1 : 0, gx = 4 + sh, gy = TP.H - 20;  // le jardinier, et sa bulle quand il râle
+    g.drawImage(G ? TP_GARDENER.mad : TP_GARDENER.calm, gx, gy);
+    if (G) { px(g, '#1a1018', gx - 2, gy + 4, 4, 5); px(g, '#f4a088', gx - 1, gy + 5, 2, 3); px(g, '#f4f0f8', gx - 1, gy + 9, 2, 4);  // le poing levé
+      const w = PXK.layout(G.text).w + 8, bx = 26, by = TP.H - 17;
+      px(g, '#1a1018', bx - 1, by - 1, w + 2, 15); px(g, '#ffffff', bx, by, w, 13); px(g, '#1a1018', bx - 4, by + 7, 4, 3); px(g, '#ffffff', bx - 3, by + 8, 4, 1);
+      PXK.fill(g, G.text, bx + 4, by + 10, '#1a1018', 1, 'left'); } }
   if (tp.swing) { const s = tp.swing, a = s.t > 4; g.save(); g.translate(s.x + 4, s.y + 6); g.rotate(a ? -.6 : 0); g.drawImage(TP_MALLET, -2, -12); g.restore(); if (!a) { px(g, '#ffffff', s.x - 8, s.y + 4, 2, 1); px(g, '#ffffff', s.x + 8, s.y + 4, 2, 1); } }
   for (const p of tp.pops) pxFont(g, p.text, p.x, p.y, p.c, 8, 'center');
   // l'affichage : score, multiplicateur, temps (une barre qui se vide)
   px(g, '#1a1018', 0, 0, W, TP.HUD);
   pxFont(g, String(tp.score), 4, 10, '#ffffff', 8);
   if (tpMult() > 1) pxFont(g, '×' + tpMult(), 50, 10, '#ffd84a', 8);
-  const left = 1 - tp.t / TP.ROUND, secs = Math.ceil((TP.ROUND - tp.t) / 60);
-  px(g, '#3a2a32', 72, 5, 46, 4); px(g, secs <= 10 && (tp.tick >> 3) % 2 ? '#ff4a3a' : '#7ee07a', 73, 6, Math.round(44 * left), 2);
-  pxFont(g, secs + ' s', W - 4, 10, secs <= 10 ? '#ff8a3a' : '#ffffff', 8, 'right');
-  if (tp.mode === 'ready') gameText(g, W, [['TAUPINIÈRE', '#ffd84a', 12], ['Clique les taupes', '#ffffff'], ['ou pavé numérique', '#ffffff'], ['Pas le hérisson !', '#ff8a3a'], ['Record ' + (games.best.taupiniere || 0), '#ffd84a'], ['Espace : jouer', '#b8b0c8']], 50);
+  const left = 1 - tp.t / TP.ROUND, secs = tp.surv ? Math.floor(tp.t / 60) : Math.ceil((TP.ROUND - tp.t) / 60);
+  if (tp.surv) for (let k = 0; k < 3; k++) sprite(g, TP_HEART, 76 + k * 10, 4, {k: '#1a1018', r: k < tp.lives ? '#ff4a5a' : '#3a2a32'});  // les vies
+  else { px(g, '#3a2a32', 72, 5, 46, 4); px(g, secs <= 10 && (tp.tick >> 3) % 2 ? '#ff4a3a' : '#7ee07a', 73, 6, Math.round(44 * left), 2); }
+  pxFont(g, secs + ' s', W - 4, 10, !tp.surv && secs <= 10 ? '#ff8a3a' : '#ffffff', 8, 'right');
+  if (tp.mode === 'ready') gameText(g, W, [['TAUPINIÈRE', '#ffd84a', 12], [tp.surv ? 'Survie : 3 vies' : 'Chrono 60 s', '#7ee07a'], ['Clique les taupes', '#ffffff'], ['Pas le hérisson !', '#ff8a3a'], ['Record ' + (games.best[tp.surv ? 'taupiniereS' : 'taupiniere'] || 0), '#ffd84a'], ['Espace : jouer', '#b8b0c8']], 50);
   if (tp.mode === 'pause') gameText(g, W, [['PAUSE', '#ffffff', 12], ['Espace : reprendre', '#b8b0c8']], 80);
-  if (tp.mode === 'over' && tp.dead > 40) gameText(g, W, [['TEMPS !', '#ffd84a', 12], [tp.score + ' points', '#ffffff'], [tp.hits + (tp.hits > 1 ? ' taupes' : ' taupe') + ' · série de ' + tp.bestStreak, '#b8b0c8'], [tp.record ? 'NOUVEAU RECORD !' : 'Record ' + (games.best.taupiniere || 0), '#ffd84a'], [tp.dead > 60 ? 'Espace : rejouer' : '', '#b8b0c8']], 62);
+  if (tp.mode === 'over' && tp.dead > 40) gameText(g, W, [[tp.surv ? 'PERDU !' : 'TEMPS !', '#ffd84a', 12], [tp.score + ' points', '#ffffff'], [tp.hits + (tp.hits > 1 ? ' taupes' : ' taupe') + ' · série de ' + tp.bestStreak, '#b8b0c8'], [tp.record ? 'NOUVEAU RECORD !' : 'Record ' + (games.best[tp.surv ? 'taupiniereS' : 'taupiniere'] || 0), '#ffd84a'], [tp.dead > 60 ? 'Espace : rejouer' : '', '#b8b0c8']], 62);
   if (tp.tick % 30 === 0) g.canvas.setAttribute('aria-label', 'Taupinière : ' + (tp.mode === 'play' ? tp.score + ' points, ' + secs + ' secondes, ' + tp.hits + ' taupes, sorties : ' + (tp.holes.map((m, i) => m && m.y > .45 && !m.hit ? [7, 8, 9, 4, 5, 6, 1, 2, 3][i] + (m.kind === 'hedge' ? ' hérisson' : '') : '').filter(Boolean).join(', ') || 'aucune') : tp.mode === 'over' ? 'partie finie, ' + tp.score + ' points' : tp.mode === 'pause' ? 'pause' : 'prêt'));
 }
 function tpInfo() {
-  $('tpStats').replaceChildren(...[['Meilleur score', games.best.taupiniere || 0], ['Parties', tps.games], ['Taupes tapées', tps.moles], ['Taupes dorées', tps.golds]].flatMap(([a, b]) => [el('span', '', a), el('b', '', String(b))]));
+  $('tpStats').replaceChildren(...[['Meilleur score', games.best.taupiniere || 0], ['Record survie', games.best.taupiniereS || 0], ['Parties', tps.games], ['Taupes tapées', tps.moles], ['Taupes dorées', tps.golds]].flatMap(([a, b]) => [el('span', '', a), el('b', '', String(b))]));
 }
 function tpStart() {
   if (tp.mode === 'ready' || tp.mode === 'pause') { tp.mode = 'play'; return true; }
@@ -458,16 +486,23 @@ document.addEventListener('keydown', e => {
   cv.onpointerdown = e => { e.preventDefault(); if (!tp || tpStart()) return; const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * TP.W, y = (e.clientY - r.top) / r.height * TP.H;
     const i = TP_HOLES.findIndex(h => Math.abs(x - h.x) < 20 && y > h.y - 26 && y < h.y + 10); if (i >= 0) tpWhack(i); else if (tp.mode === 'play') { tp.swing = {x, y, t: 8}; } }; }
 $('tpNew').onclick = () => { tpNew(); $('tpNew').blur(); };
+$('tpMode').value = tps.mode; $('tpMode').onchange = () => { tps.mode = $('tpMode').value; saveGames(); tpNew(); $('tpMode').blur(); };
+$('tpCanvas').__tp = {st: () => tp, up: () => tpUpdate(), whack: i => tpWhack(i), mode: m => { tps.mode = m; tpNew(); }};  // pour le test « local »
 {  // vérification : une taupe sortie se tape, le casque demande deux coups, le hérisson fait perdre des points, la série monte le multiplicateur
-  const keep = tp; tp = null; tpNew(); tp.mode = 'play';
+  const keep = tp, keepS = JSON.stringify(tps), keepB = games.best.taupiniereS; tp = null; tpNew(); tp.mode = 'play';
   tp.holes[0] = {kind: 'mole', y: 1, phase: 'stay', stay: 99, hp: 1, hit: 0}; tpWhack(0); const one = tp.score === 10 && tp.holes[0].hit === 1;
   tp.holes[1] = {kind: 'helmet', y: 1, phase: 'stay', stay: 99, hp: 2, hit: 0}; tpWhack(1); const helm1 = !tp.holes[1].hit; tpWhack(1); const helm2 = tp.holes[1].hit === 1 && tp.score === 30;
   tp.holes[2] = {kind: 'hedge', y: 1, phase: 'stay', stay: 99, hp: 1, hit: 0}; tpWhack(2); const hedge = tp.score === 0 && tp.streak === 0;
   for (let k = 0; k < 5; k++) { tp.holes[3] = {kind: 'mole', y: 1, phase: 'stay', stay: 99, hp: 1, hit: 0}; tpWhack(3); }
   const mult = tpMult() === 2;
-  console.assert(one && helm1 && helm2 && hedge && mult, 'taupiniere', {one, helm1, helm2, hedge, mult});
+  tpWhack(8); const grumble = !!tp.talk;  // un coup dans le vide : le jardinier râle
+  tp.surv = true; tp.lives = 3; for (let k = 0; k < 3; k++) { tp.holes[k] = {kind: 'mole', y: .05, phase: 'down', stay: 0, hp: 1, hit: 0}; tpUpdate(); }
+  const surv = tp.lives === 0 && tp.mode === 'over' && tp.escaped === 3;  // trois taupes échappées : plus de vies
+  console.assert(one && helm1 && helm2 && hedge && mult && grumble && surv && TP_GARDENER_ROWS.every(r => r.length === 16), 'taupiniere', {one, helm1, helm2, hedge, mult, grumble, surv});
+  Object.assign(tps, JSON.parse(keepS)); if (keepB === undefined) delete games.best.taupiniereS; else games.best.taupiniereS = keepB;  // la partie de la vérification ne compte pas
   tp = keep;
 }
+$('tpFs').onclick = () => { $('tpFs').blur(); try { document.fullscreenElement ? document.exitFullscreen() : $('tpCanvas').parentElement.requestFullscreen?.().catch(() => {}); } catch {} };
 ctx.onOpen(() => {
   if (!tp || !tp.g) { tpNew(); tp.g = $('tpCanvas').getContext('2d'); }
   gameLoop(tp, 'taupiniere', tpUpdate, tpDraw); tpInfo();

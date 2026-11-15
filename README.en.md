@@ -32,3 +32,12 @@ Your best score and totals are saved by NeoDex, backed up and synced between you
 In NeoDex: **NeoStore → Discover → Molehill → Install**.
 
 Making a plugin: see the [NeoDex SDK](https://github.com/NDesumeur/neodex-sdk).
+
+## Full screen
+
+The "FULL SCREEN" button puts the game in full screen. The game also grows with the window, from a small laptop to a big screen.
+
+## The gardener and survival mode
+
+- **The gardener** stands behind the fence at the bottom of the garden. When you hit nothing, a mole gets away or you hit the hedgehog, he turns red, raises his fist and grumbles ("My lettuce!", "Aim better!"…).
+- **Survival mode** (Mode menu): no time limit, but three lives. Each mole that gets away costs one. Moles come out faster and faster; the survival record is kept separately.
