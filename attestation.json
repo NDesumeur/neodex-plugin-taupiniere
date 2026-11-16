@@ -1,9 +1,9 @@
 {
   "pluginId": "neodex.taupiniere",
   "repo": "NDesumeur/neodex-plugin-taupiniere",
-  "version": "1.0.0",
-  "sha256": "4b380902c0cb71d873efb56a50f35080c893c8a9873fdc7987c1ddf2b36e7c33",
-  "approvedAt": "2026-11-12T12:24:43.796Z",
+  "version": "1.1.0",
+  "sha256": "681b4237fc8931b7a9a875365bb153f90aa6afc37817381307dd893ee7597939",
+  "approvedAt": "2026-11-16T04:14:40.000Z",
   "neobase": ">=4.0.0",
-  "signature": "wTa97HgzdaxpDJeULsll/3eGX4j5gT6ZCAY/A/HXCpLHiZ9SIeuFsGWcmmIRcV278gXSBh95G/tll7HyKFz8AQ=="
+  "signature": "H1nvwdxKWGgMhRazVFQk2Wy+76XJz8JEP4wCRV6sKa1kanVz15d+tnluuTfVt1WA3FWZ5Ngn2fb9j1eSPFHECw=="
 }
