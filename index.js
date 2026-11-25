@@ -300,6 +300,9 @@ export default async function (ctx) {
   const best = (k, v) => { const b = games.best[k]; if (v > (b ?? 0)) {  // un score nul n'est jamais un record
     games.best[k] = v; saveGames(); return true; } return false; };
   const gstore = (k, init) => (games[k] ??= init);
+  // les trophées de NeoDex (3.4.8 et plus) : succès et records déclarés dans plugin.json ; sur un NeoDex plus ancien, rien ne se passe
+  const trophy = id => { ctx.games?.unlock(id).catch(() => {}); };
+  const trophyRecord = (id, v) => { if (v != null && Number.isFinite(+v)) ctx.games?.record(id, +v).catch(() => {}); };
 function gameLoop(st, appKey, update, draw) {
   cancelAnimationFrame(st.raf);
   const STEP = 1000 / 60; let acc = 0, last = performance.now();
@@ -466,6 +469,7 @@ function tpDraw() {
   if (tp.tick % 30 === 0) g.canvas.setAttribute('aria-label', 'Taupinière : ' + (tp.mode === 'play' ? tp.score + ' points, ' + secs + ' secondes, ' + tp.hits + ' taupes, sorties : ' + (tp.holes.map((m, i) => m && m.y > .45 && !m.hit ? [7, 8, 9, 4, 5, 6, 1, 2, 3][i] + (m.kind === 'hedge' ? ' hérisson' : '') : '').filter(Boolean).join(', ') || 'aucune') : tp.mode === 'over' ? 'partie finie, ' + tp.score + ' points' : tp.mode === 'pause' ? 'pause' : 'prêt'));
 }
 function tpInfo() {
+  setTimeout(tpTrophies);
   $('tpStats').replaceChildren(...[['Meilleur score', games.best.taupiniere || 0], ['Record survie', games.best.taupiniereS || 0], ['Parties', tps.games], ['Taupes tapées', tps.moles], ['Taupes dorées', tps.golds]].flatMap(([a, b]) => [el('span', '', a), el('b', '', String(b))]));
 }
 function tpStart() {
@@ -503,6 +507,13 @@ $('tpCanvas').__tp = {st: () => tp, up: () => tpUpdate(), whack: i => tpWhack(i)
   tp = keep;
 }
 $('tpFs').onclick = () => { $('tpFs').blur(); try { document.fullscreenElement ? document.exitFullscreen() : $('tpCanvas').parentElement.requestFullscreen?.().catch(() => {}); } catch {} };
+// les trophées, tirés des statistiques et des records gardés (aussi à l'ouverture : ce qui a été fait avant compte)
+function tpTrophies() {
+  const c = games.best.taupiniere || 0, s = games.best.taupiniereS || 0, sig = [c, s, tps.games, tps.moles, tps.golds].join(); if (sig === tpTrophies.sig) return; tpTrophies.sig = sig;
+  trophyRecord('chrono', c || null); trophyRecord('survie', s || null);
+  if (tps.games >= 1) trophy('premier'); if (c >= 500) trophy('s500'); if (c >= 1000) trophy('s1000'); if (s >= 500) trophy('survie');
+  if (tps.moles >= 1000) trophy('mille'); if (tps.golds >= 50) trophy('dorees');
+}
 ctx.onOpen(() => {
   if (!tp || !tp.g) { tpNew(); tp.g = $('tpCanvas').getContext('2d'); }
   gameLoop(tp, 'taupiniere', tpUpdate, tpDraw); tpInfo();

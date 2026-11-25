@@ -1,7 +1,7 @@
 {
   "id": "neodex.taupiniere",
   "name": "Taupinière",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "author": "NDesumeur",
   "description": "Jeu de réflexe : pendant une minute, des taupes sortent de neuf trous dans un potager. Tape-les avant qu'elles ne rentrent, à la souris, au doigt ou au pavé numérique. Taupes dorées qui rapportent gros, taupes casquées qui demandent deux coups, hérissons à ne pas toucher, et un multiplicateur pour les séries. Score et record. Bouton plein écran ; un jardinier râle quand on rate ; mode survie : une taupe qui s'échappe coûte une vie.",
   "icon": "icon.png",
@@ -10,7 +10,10 @@
   "neobase": ">=4.0.0",
   "type": "app",
   "category": "Jeux",
-  "compatibility": ["windows", "linux"],
+  "compatibility": [
+    "windows",
+    "linux"
+  ],
   "syncMode": "aucune",
   "syncInfo": "Rien n'est synchronisé : tes records restent sur cet appareil.",
   "mobile": false,
@@ -19,5 +22,52 @@
   "sdk": "2.1.0",
   "permissions": [
     "storage"
+  ],
+  "succes": [
+    {
+      "id": "premier",
+      "nom": "Pas dans mes carottes",
+      "texte": "Finir une première partie"
+    },
+    {
+      "id": "s500",
+      "nom": "Bon jardinier",
+      "texte": "Faire 500 points en chrono"
+    },
+    {
+      "id": "s1000",
+      "nom": "Terreur des taupes",
+      "texte": "Faire 1 000 points en chrono"
+    },
+    {
+      "id": "survie",
+      "nom": "Increvable",
+      "texte": "Faire 500 points en survie"
+    },
+    {
+      "id": "mille",
+      "nom": "Mille taupes",
+      "texte": "Taper 1 000 taupes en tout"
+    },
+    {
+      "id": "dorees",
+      "nom": "Chercheur d'or",
+      "texte": "Taper 50 taupes dorées",
+      "cache": true
+    }
+  ],
+  "records": [
+    {
+      "id": "chrono",
+      "nom": "Meilleur score (chrono)",
+      "sens": "haut",
+      "format": "nombre"
+    },
+    {
+      "id": "survie",
+      "nom": "Meilleur score (survie)",
+      "sens": "haut",
+      "format": "nombre"
+    }
   ]
 }
